@@ -1,9 +1,8 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
-// #ifndef PyInit_MODULE
-// #error "PyInit_MODULE: the name of the module's initialization function"
-// #endif
-// PyMODINIT_FUNC PyInit_MODULE();
+#ifdef PyInit_MODULE
+PyMODINIT_FUNC PyInit_MODULE();
+#endif
 #define Check(exp)                     \
     do                                 \
     {                                  \
@@ -19,8 +18,10 @@ int main(int argc, char *argv[])
     PyConfig_InitPythonConfig(&config);
 
     // 根据CMake 变量MODULE_NAME以configure_file实现调试指定python模块
-    // PyImport_AppendInittab(__MODULE_NAME__, PyInit_MODULE);
-    
+#if defined PyInit_MODULE && defined __MODULE_NAME__
+    PyImport_AppendInittab(__MODULE_NAME__, PyInit_MODULE);
+#endif
+
     Check(status = PyConfig_SetBytesArgv(&config, argc, argv));
     Check(status = Py_InitializeFromConfig(&config));
     PyConfig_Clear(&config);

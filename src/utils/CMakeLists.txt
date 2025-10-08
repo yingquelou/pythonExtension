@@ -20,16 +20,19 @@ else()
     set(${PROJ}_SUFFIX so)
 endif()
 
-swig_add_library(${PROJ} 
+if(MODULE_NAME STREQUAL PROJ)
+    set(${PROJ}_FLAG TYPE STATIC)
+endif()
+
+swig_add_library(${PROJ} ${${PROJ}_FLAG}
 NO_PROXY
 LANGUAGE python SOURCES utils.i)
+
 set_target_properties(${PROJ} PROPERTIES
-SUFFIX ".${Python_SOABI}.${${PROJ}_SUFFIX}"
+# SUFFIX ".${Python_SOABI}.${${PROJ}_SUFFIX}"
 DEBUG_POSTFIX "_d"
 )
 target_link_libraries(${PROJ} Python::Python)
 cmake_policy(POP)
 
-add_test(NAME ${PROJ} COMMAND py .
-WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR})
-set_tests_properties(${PROJ} PROPERTIES ENVIRONMENT_MODIFICATION PYTHONPATH=path_list_prepend:$<TARGET_FILE_DIR:${PROJ}>)
+python_test()
