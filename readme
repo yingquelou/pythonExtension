@@ -1,1 +1,184 @@
-python嵌入与扩展
+# python嵌入与扩展
+## SWIG
+### Common typemap methods
+The family of typemaps recognized by a language module may vary. However, the following typemap methods are nearly universal:
+
+#### "in" typemap
+The "in" typemap is used to convert function arguments from the target language to C. For example:
+
+    %typemap(in) int {
+    $1 = PyInt_AsLong($input);
+    }
+
+The following additional special variables are available:
+
+$input            
+- Input object holding value to be converted.
+This is probably the most commonly redefined typemap because it can be used to implement customized conversions.
+
+In addition, the "in" typemap allows the number of converted arguments to be specified. The numinputs attributes facilitates this. For example:
+
+    // Ignored argument.
+    %typemap(in, numinputs=0) int *out (int temp) {
+    $1 = &temp;
+    }
+At this time, only zero or one arguments may be converted. When numinputs is set to 0, the argument is effectively ignored and cannot be supplied from the target language. The argument is still required when making the C/C++ call and the above typemap shows the value used is instead obtained from a locally declared variable called temp. Usually numinputs is not specified, whereupon the default value is 1, that is, there is a one to one mapping of the number of arguments when used from the target language to the C/C++ call. Multi-argument typemaps provide a similar concept where the number of arguments mapped from the target language to C/C++ can be changed for multiple adjacent C/C++ arguments.
+
+#### "typecheck" typemap
+The "typecheck" typemap is used to support overloaded functions and methods. It merely checks an argument to see whether or not it matches a specific type. For example:
+
+    %typemap(typecheck, precedence=SWIG_TYPECHECK_INTEGER) int {
+    $1 = PyInt_Check($input) ? 1 : 0;
+    }
+For typechecking, the $1 variable is always a simple integer that is set to 1 or 0 depending on whether or not the input argument is the correct type. Set to 1 if the input argument is the correct type otherwise set to 0.
+
+If you define new "in" typemaps and your program uses overloaded methods, you should also define a collection of "typecheck" typemaps. More details about this follow in the Typemaps and overloading section.
+
+#### "out" typemap
+The "out" typemap is used to convert function/method return values from C into the target language. For example:
+
+    %typemap(out) int {
+    $result = PyInt_FromLong($1);
+    }
+The following additional special variables are available.
+
+$result           
+- Result object returned to target language.
+The "out" typemap supports an optional attribute flag called "optimal". This is for code optimisation and is detailed in the Optimal code generation when returning by value section.
+
+#### "arginit" typemap
+The "arginit" typemap is used to set the initial value of a function argument--before any conversion has occurred. This is not normally necessary, but might be useful in highly specialized applications. For example:
+
+    // Set argument to NULL before any conversion occurs
+    %typemap(arginit) int *data {
+    $1 = NULL;
+    }
+#### "default" typemap
+The "default" typemap is used to turn an argument into a default argument. For example:
+
+    %typemap(default) int flags {
+    $1 = DEFAULT_FLAGS;
+    }
+    ...
+    int foo(int x, int y, int flags);
+The primary use of this typemap is to either change the wrapping of default arguments or specify a default argument in a language where they aren't supported (like C). Target languages that do not support optional arguments, such as Java and C#, effectively ignore the value specified by this typemap as all arguments must be given.
+
+Once a default typemap has been applied to an argument, all arguments that follow must have default values. See the Default/optional arguments section for further information on default argument wrapping.
+
+#### "check" typemap
+The "check" typemap is used to supply value checking code during argument conversion. The typemap is applied after arguments have been converted. For example:
+
+    %typemap(check) int positive {
+    if ($1 <= 0) {
+        SWIG_exception(SWIG_ValueError, "Expected positive value.");
+    }
+    }
+#### "argout" typemap
+The "argout" typemap is used to return values from arguments. This is most commonly used to write wrappers for C/C++ functions that need to return multiple values. The "argout" typemap is almost always combined with an "in" typemap---possibly to ignore the input value. For example:
+
+    /* Set the input argument to point to a temporary variable */
+    %typemap(in, numinputs=0) int *out (int temp) {
+    $1 = &temp;
+    }
+
+    %typemap(argout) int *out {
+    // Append output value $1 to $result
+    ...
+    }
+The following additional special variables are available.
+
+$result           
+- Result object returned to target language.
+
+$input            
+- The original input object passed.
+The code supplied to the "argout" typemap is always placed after the "out" typemap. If multiple return values are used, the extra return values are often appended to return value of the function.
+
+See the typemaps.i library file for examples.
+
+#### "freearg" typemap
+The "freearg" typemap is used to cleanup argument data. It is only used when an argument might have allocated resources that need to be cleaned up when the wrapper function exits. The "freearg" typemap usually cleans up argument resources allocated by the "in" typemap. For example:
+
+    // Get a list of integers
+    %typemap(in) int *items {
+    int nitems = Length($input);
+    $1 = (int *) malloc(sizeof(int)*nitems);
+    }
+    // Free the list 
+    %typemap(freearg) int *items {
+    free($1);
+    }
+The "freearg" typemap inserted at the end of the wrapper function, just before control is returned back to the target language. This code is also placed into a special variable $cleanup that may be used in other typemaps whenever a wrapper function needs to abort prematurely.
+
+#### "newfree" typemap
+The "newfree" typemap is used in conjunction with the %newobject directive and is used to deallocate memory used by the return result of a function. For example:
+
+    %typemap(newfree) string * {
+    delete $1;
+    }
+    %typemap(out) string * {
+    $result = PyString_FromString($1->c_str());
+    }
+    ...
+
+    %newobject foo;
+    ...
+    string *foo();
+See Object ownership and %newobject for further details.
+
+#### "ret" typemap
+The "ret" typemap is not used very often, but can be useful for anything associated with the return type, such as resource management, return value error checking, etc. Usually this can all be done in the "out" typemap, but sometimes it is handy to use the "out" typemap code untouched and add to the generated code using the code in the "ret" typemap. One such case is memory clean up. For example, a stringheap_t type is defined indicating that the returned memory must be deleted and a string_t type is defined indicating that the returned memory must not be deleted.
+
+    %typemap(ret) stringheap_t %{
+    free($1);
+    %}
+
+    typedef char * string_t;
+    typedef char * stringheap_t;
+
+    string_t MakeString1();
+    stringheap_t MakeString2();
+The "ret" typemap above will only be used for MakeString2, but both functions will use the default "out" typemap for char * provided by SWIG. The code above would ensure the appropriate memory is freed in all target languages as the need to provide custom "out" typemaps (which involve target language specific code) is not necessary.
+
+This approach is an alternative to using the "newfree" typemap and %newobject as there is no need to list all the functions that require the memory cleanup, it is purely done on types.
+
+#### "memberin" typemap
+The "memberin" typemap is used to copy data from an already converted input value into a structure member. It is typically used to handle array members and other special cases. For example:
+
+    %typemap(memberin) int [4] {
+    memmove($1, $input, 4*sizeof(int));
+    }
+It is rarely necessary to write "memberin" typemaps---SWIG already provides a default implementation for arrays, strings, and other objects.
+
+#### "varin" typemap
+The "varin" typemap is used to convert objects in the target language to C for the purposes of assigning to a C/C++ global variable. This is implementation specific.
+
+#### "varout" typemap
+The "varout" typemap is used to convert a C/C++ object to an object in the target language when reading a C/C++ global variable. This is implementation specific.
+
+#### "throws" typemap
+The "throws" typemap is only used when SWIG parses a C++ method with an exception specification or has the %catches feature attached to the method (see Exception handling with %catches). It provides a default mechanism for handling C++ methods that have declared the exceptions they will throw. The purpose of this typemap is to convert a C++ exception into an error or exception in the target language. It is slightly different to the other typemaps as it is based around the exception type rather than the type of a parameter or variable. For example:
+
+    %typemap(throws) const char * %{
+    PyErr_SetString(PyExc_RuntimeError, $1);
+    SWIG_fail;
+    %}
+
+    // Either an exception specification on the method
+    void bar() throw (const char *);
+
+    // Or a %catches feature attached to the method
+    %catches(const char *) bar();
+    void bar();
+As can be seen from the resulting generated code below, SWIG generates an exception handler when wrapping the bar function with the catch block comprising the "throws" typemap content.
+
+    ...
+    try {
+    bar();
+    } catch(char const *_e) {
+    PyErr_SetString(PyExc_RuntimeError, _e);
+    SWIG_fail;
+    }
+    ...
+Note that if your methods do not have an exception specification but they do throw exceptions and you are not using %catches, SWIG cannot know how to deal with them. Please also see the Exception handling with %exception section for another way to handle exceptions.
+#### "doc" typemap
