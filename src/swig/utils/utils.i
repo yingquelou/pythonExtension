@@ -1,11 +1,5 @@
 %{
     #include <win32.h>
-    BSTR demo(HRESULT hr){
-    BSTR s;
-    FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
-                    NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPWSTR)&s, 0, NULL);
-    return s;
-    }
 %}
 
 typedef OLECHAR *BSTR;
@@ -19,7 +13,6 @@ typedef CLSID *LPCLSID;
 }
 
 %typemap(in) OLECHAR * {
-    // typemap2
     Py_ssize_t sz;
     $1 = PyUnicode_AsWideCharString($input,&sz);
 }
@@ -57,15 +50,14 @@ typedef CLSID *LPCLSID;
 }
 
 %typemap(argout) OLECHAR ** {
-    if(*($1))
-    {$result = PyUnicode_FromWideChar(*($1), -1);}
-    else
-    { PyErr_SetObject(PyExc_RuntimeError,PyUnicode_FromWideChar(demo(GetLastError()),-1));
-        $result = NULL;
-    }
+    $result = PyUnicode_FromWideChar(*($1), -1);
 }
 
-%typemap(doc) LPCLSID lpclsid "ok"
+%init {
+    // Add an integer constant 'name' with value 12 to the Python module
+    PyModule_AddIntConstant(m,"name",12);
+}
+
 %apply GUID *ArgOut {LPCLSID lpclsid}
 %feature("autodoc");
 HRESULT CLSIDFromProgID(LPCOLESTR lpszProgID, LPCLSID lpclsid);

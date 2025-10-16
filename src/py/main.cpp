@@ -21,8 +21,8 @@ int main(int argc, char *argv[])
 #if defined PyInit_MODULE && defined __MODULE_NAME__
     PyImport_AppendInittab(__MODULE_NAME__, PyInit_MODULE);
 #endif
-
     Check(status = PyConfig_SetBytesArgv(&config, argc, argv));
+    Check(status = PyConfig_SetBytesString(&config,&config.exec_prefix,PYTHON_EXEC_PREFIX));
     Check(status = Py_InitializeFromConfig(&config));
     PyConfig_Clear(&config);
 
