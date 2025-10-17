@@ -1,20 +1,24 @@
 %{
     #include <win32.h>
 %}
+%feature("autodoc",2);
 
+#ifdef UNICODE
+%include "cwstring.i"
+typedef wchar_t OLECHAR;
+#else
+%include "cstring.i"
+typedef char OLECHAR;
+#endif
 typedef OLECHAR *BSTR;
 typedef OLECHAR *LPOLESTR;
 typedef const OLECHAR *LPCOLESTR;
 typedef GUID IID;
 typedef GUID CLSID;
 typedef CLSID *LPCLSID;
+
 %typemap(argout) OLECHAR * {
     $result = PyUnicode_FromWideChar($1,-1);
-}
-
-%typemap(in) OLECHAR * {
-    Py_ssize_t sz;
-    $1 = PyUnicode_AsWideCharString($input,&sz);
 }
 
 %typemap(in,numinputs=0) GUID *ArgOut (GUID temp){
@@ -58,10 +62,9 @@ typedef CLSID *LPCLSID;
     PyModule_AddIntConstant(m,"name",12);
 }
 
+
 %apply GUID *ArgOut {LPCLSID lpclsid}
-%feature("autodoc");
 HRESULT CLSIDFromProgID(LPCOLESTR lpszProgID, LPCLSID lpclsid);
 
 %apply OLECHAR **ArgOut {LPOLESTR *lplpszProgID}
-%feature("autodoc");
 HRESULT ProgIDFromCLSID(REFCLSID clsid, LPOLESTR *lplpszProgID);

@@ -1,12 +1,23 @@
-#ifdef MODULE_NAME
-%module MODULE_NAME
-#endif
-%include "std_vector.i" 
-%include "std_array.i" 
-// %include "std_iostream.i" 
-%include "std_complex.i" 
-%include "cstring.i" 
-
-namespace std {
-    %template("vector") vector<PyObject*>;
-};
+// %include "std_wstring.i"
+%include "std_string.i"
+%include "cwstring.i"
+// %include "wchar.i"
+%{
+#include <sstream>
+%} 
+%inline {
+    const wchar_t *tow()
+    {
+        return L"NULL";
+    }
+    struct Point
+    {
+        double x,y;
+    };
+}
+%extend Point {
+    %pythoncode {
+        def ok(self):
+            return f'Point({self.x,self.y})'
+    }
+}

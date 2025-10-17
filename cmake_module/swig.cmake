@@ -1,8 +1,9 @@
 function(swig_test)
-    add_test(NAME ${PROJ} COMMAND Python::Interpreter ${CMAKE_CURRENT_LIST_DIR})
+    add_test(NAME ${PROJ} COMMAND Python::InterpreterMultiConfig ${CMAKE_CURRENT_LIST_DIR})
     set_tests_properties(${PROJ} PROPERTIES 
     ENVIRONMENT PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}
-    ENVIRONMENT_MODIFICATION PYTHONPATH=path_list_prepend:$<TARGET_FILE_DIR:${PROJ}>)
+    ENVIRONMENT_MODIFICATION PYTHONPATH=path_list_prepend:$<TARGET_FILE_DIR:${PROJ}>
+    WORKING_DIRECTORY $<TARGET_FILE_DIR:${PROJ}>)
 endfunction()
 function(list_unique RESULT)
     foreach(ITEM IN LISTS ARGN ${RESULT})

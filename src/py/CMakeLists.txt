@@ -1,6 +1,6 @@
 cmake_path(GET CMAKE_CURRENT_LIST_DIR STEM PROJ)
 add_executable(${PROJ} main.cpp)
-target_link_libraries(${PROJ} PRIVATE
+target_link_libraries(${PROJ}
 Python::Python ${MODULE_NAME})
 execute_process(COMMAND
 ${Python_EXECUTABLE} -c "import sys;print(sys.exec_prefix)"

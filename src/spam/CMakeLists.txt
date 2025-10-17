@@ -11,7 +11,7 @@ if(WIN32)
     PRIVATE
     __MODULE_NAME__="${PROJ}"
     "PyInit_MODULE=PyInit_${PROJ}"
-    Py_LIMITED_API=0x03080af0
+    # Py_LIMITED_API=0x03080af0
     )
     
     if(MSVC)
