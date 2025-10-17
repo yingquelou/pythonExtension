@@ -3,13 +3,8 @@
 %}
 %feature("autodoc",2);
 
-#ifdef UNICODE
 %include "cwstring.i"
 typedef wchar_t OLECHAR;
-#else
-%include "cstring.i"
-typedef char OLECHAR;
-#endif
 typedef OLECHAR *BSTR;
 typedef OLECHAR *LPOLESTR;
 typedef const OLECHAR *LPCOLESTR;

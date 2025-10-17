@@ -18,6 +18,6 @@
 %extend Point {
     %pythoncode {
         def ok(self):
-            return f'Point({self.x,self.y})'
+            return f"Point({self.x,self.y})"
     }
 }

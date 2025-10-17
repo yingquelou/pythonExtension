@@ -5,6 +5,7 @@ function(swig_test)
     ENVIRONMENT_MODIFICATION PYTHONPATH=path_list_prepend:$<TARGET_FILE_DIR:${PROJ}>
     WORKING_DIRECTORY $<TARGET_FILE_DIR:${PROJ}>)
 endfunction()
+
 function(list_unique RESULT)
     foreach(ITEM IN LISTS ARGN ${RESULT})
         if(NOT ITEM IN_LIST ${CMAKE_CURRENT_FUNCTION}_OUT)
@@ -14,7 +15,7 @@ function(list_unique RESULT)
     set(${RESULT} ${${CMAKE_CURRENT_FUNCTION}_OUT} PARENT_SCOPE)
 endfunction()
 
-function(swig_add_python_library TARGET)
+function(swig_python_add_library TARGET)
     set(OPTIONS NO_PROXY)
     set(ENTRY
     TYPE # Target Type
@@ -56,4 +57,36 @@ function(swig_add_python_library TARGET)
     else()
         set_target_properties(${TARGET} PROPERTIES PREFIX _)
     endif()
+endfunction()
+
+function(swig_python_library TARGET)
+    set(OPTIONS BUILTIN)
+    set(ENTRY SOURCE)
+    set(ENTRIES)
+    cmake_parse_arguments(PARSE_ARGV 1 ${TARGET} "${OPTIONS}" "${ENTRY}" "${ENTRIES}")
+    
+    set_property(SOURCE ${${TARGET}_SOURCE} PROPERTY
+    CPLUSPLUS ON)
+    set_property(SOURCE ${${TARGET}_SOURCE} 
+    PROPERTY COMPILE_OPTIONS
+    "$<$<BOOL:${${TARGET}_BUILTIN}>:-builtin>"
+    "-interface" "$<$<NOT:$<BOOL:${${TARGET}_BUILTIN}>>:_>${TARGET}"
+    "-module" "${TARGET}"
+    # "-debug-tmused"
+    # "-debug-typemap"
+    # "-debug-tmsearch"
+    # "-directors"
+    )
+    if(MODULE_NAME STREQUAL TARGET)
+        set(${TARGET}_FLAG TYPE STATIC)
+    endif()
+    swig_add_library(${TARGET} LANGUAGE python ${${TARGET}_FLAG} SOURCES ${${TARGET}_SOURCE})
+    target_link_libraries(${TARGET} Python::Python)
+    if(MSVC)
+        set(DEBUG_FLAG _d)
+    endif()
+
+    set_target_properties(${TARGET} PROPERTIES
+    DEBUG_POSTFIX "${DEBUG_FLAG}.${Python_SOABI}"
+    RELEASE_POSTFIX ".${Python_SOABI}")
 endfunction()
